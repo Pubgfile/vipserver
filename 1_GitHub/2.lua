@@ -1213,7 +1213,7 @@ _G.LexusConfig = _G.LexusConfig or {
     RemoveFog   = true,
     BlackSky    = false,
     IpadView    = true,
-    RainbowHit  = true,
+    RainbowHit  = false, -- removed colored crosshair/hit
 }
 
 _G.LexusState = _G.LexusState or {
@@ -1388,7 +1388,7 @@ local isExpired = false
 _G.AK_Features = {
     { id = "ESP_HP", name = "ESP Health Bar", val = 0, type = "toggle" },
     { id = "ESP_MAP", name = "Mini Map ESP", val = 1, type = "toggle" },
-    { id = "AIMBOT", name = "Aimbot", val = 1, type = "toggle" },
+    { id = "AIMBOT", name = "Aimbot", val = 0, type = "toggle" },
     { id = "ESP_V2", name = "ESP V2 Master", val = 1, type = "toggle" },
     { id = "ESP9_Count", name = "ESP9 Count", val = 1, type = "toggle" },
     { id = "ESP9_Name", name = "ESP9 Name", val = 1, type = "toggle" },
@@ -1404,7 +1404,7 @@ _G.AK_Features = {
     { id = "ENEMY_BOX_COLOR", name = "Box Color", val = 0, type = "dropdown", options = {"Red", "Green", "Blue", "Yellow", "Purple", "Cyan"} },
     { id = "FPS165", name = "165 FPS Boost", val = 0, type = "toggle" },
     { id = "ARROW_RADAR", name = "Arrow Radar ESP", val = 1, type = "toggle" },
-    { id = "FOV_CIRCLE", name = "FOV Circle", val = 1, type = "toggle" },
+    { id = "FOV_CIRCLE", name = "FOV Circle", val = 0, type = "toggle" },
     { id = "ENEMY_COUNTER", name = "Enemy Counter", val = 1, type = "toggle" },
 }
 
@@ -1443,7 +1443,11 @@ function _G.AK_SetVal(featureId, val)
                 if _G.RedBoxOverlay and _G.RedBoxOverlay.Stop then _G.RedBoxOverlay.Stop() end
             end
         elseif featureId == "WALLHACK" then
-            if on and _G.StartNewWallhack then _G.StartNewWallhack() end
+            if on then
+                if _G.StartNewWallhack then _G.StartNewWallhack() end
+            else
+                if _G.StopNewWallhack then _G.StopNewWallhack() end
+            end
         elseif featureId == "ARROW_RADAR" then
             if on and _G.ArrowRadarESP and _G.ArrowRadarESP.Start then _G.ArrowRadarESP.Start()
             elseif not on and _G.ArrowRadarESP and _G.ArrowRadarESP.Stop then _G.ArrowRadarESP.Stop() end
@@ -2668,19 +2672,9 @@ end
 -- FOV CIRCLE
 -- ================================================================
 function ArrowRadarESP.UpdateCenterCircle(cx, cy)
-    local r  = ArrowRadarESP.FOVCircleRadius
-    local n  = ArrowRadarESP.FOVCircleSegments
-    local th = ArrowRadarESP.FOVCircleThickness
-    local c  = ArrowRadarESP.FOVCircleColor
-    for i = 1, n do
-        local a1 = ((i-1)/n) * (2*math.pi)
-        local a2 = (i/n)   * (2*math.pi)
-        if not ArrowRadarESP.FOVCircleLines[i] then
-            ArrowRadarESP.FOVCircleLines[i] = ArrowRadarESP.CreateLine(c, 0)
-        end
-        ArrowRadarESP.DrawLine(ArrowRadarESP.FOVCircleLines[i],
-            cx + math.cos(a1)*r, cy + math.sin(a1)*r,
-            cx + math.cos(a2)*r, cy + math.sin(a2)*r, th)
+    -- FOV circle REMOVED per user request
+    if ArrowRadarESP.RemoveCenterCircle then
+        pcall(ArrowRadarESP.RemoveCenterCircle)
     end
 end
 
@@ -3127,7 +3121,7 @@ function _G.EnemyCounterLoop()
     end
 
     if _G.AK_GetVal("ENEMY_COUNTER") == 1 then
-        text = text .. "\n✦ MODER - TGOWNER7 ✦"
+        text = text .. ""
     end
 
     if text ~= "" then
@@ -3286,68 +3280,8 @@ local function processEnemyMapESP(enemy, localPlayer, isMapESPEnabled)
 end
 
 function ApplyHardAimbot()
-    if not CheckExpiration() then return end
-    pcall(function()
-        local pc = slua_GameFrontendHUD:GetPlayerController()
-        if not slua.isValid(pc) then return end
-
-        local char = pc:GetPlayerCharacterSafety()
-        if not slua.isValid(char) then return end
-
-        local wm = char.WeaponManagerComponent
-        if not slua.isValid(wm) then return end
-
-        local weapon = wm.CurrentWeaponReplicated
-        if not slua.isValid(weapon) then return end
-
-        local entity = weapon.ShootWeaponEntityComp
-        if not slua.isValid(entity) then return end
-
-        entity.RecoilKickADS = 0.010
-        entity.GameDeviationFactor = 0.01
-        entity.GameDeviationAccuracy = 0.01
-        entity.SwitchFromIdleToBackpackTime = 0.01
-        entity.SwitchFromBackpackToIdleTime = 0.01
-
-        if entity.AutoAimingConfig then
-            for _, range in ipairs({"OuterRange", "InnerRange"}) do
-                local cfg = entity.AutoAimingConfig[range]
-                if cfg then
-                    cfg.Speed = 4.0
-                    cfg.RangeRate = 4.5
-                    cfg.SpeedRate = 4.0
-                    cfg.RangeRateSight = 3.0
-                    cfg.SpeedRateSight = 3.0
-                    cfg.CrouchRate = 4.5
-                    cfg.ProneRate = 4.0
-                    cfg.DyingRate = 0
-                    cfg.DriveVehicleRate = 99
-                    cfg.InVehicleRate = 99
-                    cfg.FreeFallRate = 22
-                    cfg.OpeningRate = 5
-                    cfg.LandingRate = 99
-                    cfg.adsorbMaxRange = 200
-                    cfg.adsorbMinRange = 20
-                    cfg.adsorbMinAttenuationDis = 100
-                    cfg.adsorbMaxAttenuationDis = 8000
-                    cfg.adsorbActiveMinRange = 20
-                end
-            end
-            entity.AutoAimingConfig = entity.AutoAimingConfig
-        end
-
-        pcall(function()
-            local aimComp = char.BP_AutoAimingComponent_C or char.BP_AutoAimingComponent or char.AutoAimingComponent
-            if slua.isValid(aimComp) and aimComp.Bones then
-                pcall(function() aimComp.Bones[0] = "neck_01" end)
-                pcall(function() aimComp.Bones[1] = "neck_01" end)
-                pcall(function() aimComp.Bones[2] = "neck_01" end)
-                pcall(function() aimComp.Bones:Set(0, "neck_01") end)
-                pcall(function() aimComp.Bones:Set(1, "neck_01") end)
-                pcall(function() aimComp.Bones:Set(2, "neck_01") end)
-            end
-        end)
-    end)
+    -- REMOVED: aimbot + high-speed gun switch
+    return
 end
 
 -- ========================================================================
@@ -5538,10 +5472,10 @@ local RESET_PROCESSED_EVERY = 6
 local AVATAR_SLOTS = {0,1,2,3,4,5,6,7}
 
 local colors = {
-    vis  = LinearColor(0, 255, 0, 100),
-    occ  = LinearColor(255, 0, 0, 100),
-    bVis = LinearColor(255, 255, 0, 100),
-    bOcc = LinearColor(255, 0, 0, 100)
+    vis  = LinearColor(0, 1, 0, 1),
+    occ  = LinearColor(1, 0, 1, 1),
+    bVis = LinearColor(1, 1, 0, 1),
+    bOcc = LinearColor(1, 0, 0, 1)
 }
 
 local function SetupConsole()
@@ -5570,9 +5504,8 @@ local function ApplyToMesh(mesh, visColor, occColor)
         mesh:SetOccludedDyeingColor(occColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
-        mesh:SetDrawHighlight(true)
-        mesh:OverrideHighlightColor(visColor)
-        mesh:SetHighlightCanBeOccluded(false)
+        pcall(function() mesh:SetDrawHighlight(false) end)
+        pcall(function() mesh:SetHighlightCanBeOccluded(false) end)
         mesh:SetDrawIdeaOutline(true)
         mesh:SetIdeaOutlineNew(true)
         mesh:SetIdeaOutlineOcclusionHighlight(true)
@@ -5593,6 +5526,7 @@ end
 
 local function PBCtick()
     pcall(function()
+        if type(_G.AK_GetVal) == "function" and _G.AK_GetVal("WALLHACK") ~= 1 then return end
         local localPawn = GameplayData.GetPlayerCharacter()
         if not slua.isValid(localPawn) then return end
 
@@ -5614,7 +5548,8 @@ local function PBCtick()
             if pawn.PlayerKey and PROCESSED_PAWNS[pawn.PlayerKey] then goto continue end
 
             if IsPawnAlive(pawn) and pawn.TeamID and pawn.TeamID ~= myTeamId then
-                local isAI = pcall(Game.IsAI, pawn) and true or false
+                local isAI = false
+                pcall(function() if Game and Game.IsAI then isAI = Game.IsAI(pawn) == true end end)
                 local vis = isAI and colors.bVis or colors.vis
                 local occ = isAI and colors.bOcc or colors.occ
 
@@ -5737,11 +5672,54 @@ function _pbc_Cleanup()
     print("[PBC] ? Cleanup done")
 end
 
+
+local function ClearMeshEffects(mesh)
+    if not mesh or not slua.isValid(mesh) then return end
+    pcall(function()
+        if mesh.SetDrawDyeing then mesh:SetDrawDyeing(false) end
+        if mesh.SetDrawHighlight then mesh:SetDrawHighlight(false) end
+        if mesh.SetDrawIdeaOutline then mesh:SetDrawIdeaOutline(false) end
+        if mesh.SetRenderCustomDepth then mesh:SetRenderCustomDepth(false) end
+    end)
+end
+
+function _G.StopNewWallhack()
+    pcall(function()
+        if WH_TIMER then
+            pcall(function()
+                if _G.Game and _G.Game.RemoveGameTimer then _G.Game:RemoveGameTimer(WH_TIMER) end
+            end)
+            WH_TIMER = nil
+        end
+        local allPawns = {}
+        pcall(function() allPawns = Game:GetAllPlayerPawns() or {} end)
+        for _, pawn in pairs(allPawns) do
+            if slua.isValid(pawn) then
+                pcall(function() if slua.isValid(pawn.Mesh) then ClearMeshEffects(pawn.Mesh) end end)
+                pcall(function()
+                    local avatarComp = pawn.CharacterAvatarComp2_BP
+                    if avatarComp and avatarComp.GetMeshCompBySlot then
+                        for slot = 0, 7 do
+                            local mesh = avatarComp:GetMeshCompBySlot(slot)
+                            if slua.isValid(mesh) then ClearMeshEffects(mesh) end
+                        end
+                    end
+                end)
+            end
+        end
+        PROCESSED_PAWNS = {}
+        print("[PBC] Wallhack STOPPED")
+    end)
+end
+
 function _G.StartNewWallhack()
-    if WH_TIMER then return end
-    if _G.AK_GetVal("WALLHACK") == 1 then
-        RetryStart()
+    if _G.AK_GetVal("WALLHACK") ~= 1 then
+        if type(_G.StopNewWallhack) == "function" then pcall(_G.StopNewWallhack) end
+        return
     end
+    if WH_TIMER then return end
+    retryCount = 0
+    RetryStart()
 end
 
 -- ========================================================================
@@ -6129,8 +6107,8 @@ end
                 end
             end
 
-            if _G.AK_GetVal("AIMBOT") == 1 and (not self._lastAimbotTime or (os.clock() - self._lastAimbotTime) > 2.0) then
-                ApplyHardAimbot()
+            if false and _G.AK_GetVal("AIMBOT") == 1 and (not self._lastAimbotTime or (os.clock() - self._lastAimbotTime) > 2.0) then
+                -- ApplyHardAimbot() REMOVED
                 self._lastAimbotTime = os.clock()
             end
 
@@ -6261,6 +6239,9 @@ local GANESHCuOverlay = {
 }
 
 local function EnsurePermanentGANESHCu()
+    return -- REMOVED TGOWNER7 / username watermark
+end
+local function EnsurePermanentGANESHCu_DISABLED()
     if GANESHCuOverlay.Widget and slua.isValid(GANESHCuOverlay.Widget) then
         pcall(function() GANESHCuOverlay.Widget:SetWidgetVisibility(UEnums.ESlateVisibility.SelfHitTestInvisible) end)
         pcall(function()
@@ -6407,7 +6388,7 @@ if _G.RainbowHitConfig == nil then
 end
 
 if _G.LexusConfig and _G.LexusConfig.RainbowHit ~= nil then
-    _G.RainbowHitConfig.Enabled = _G.LexusConfig.RainbowHit
+    _G.RainbowHitConfig.Enabled = false -- force original crosshair
 end
 if _G.LexusState and _G.LexusState.CustomTextData and _G.LexusState.CustomTextData.RainbowHitSpeed then
     _G.RainbowHitConfig.SpeedLevel = _G.LexusState.CustomTextData.RainbowHitSpeed
@@ -6418,6 +6399,7 @@ local RainbowTickCounter = 0
 local RainbowTimerStarted = false
 
 local function ApplyRainbowEffects()
+    return -- REMOVED: colored crosshair / rainbow hit
     if not _G.RainbowHitConfig.Enabled then return end
 
     local delay = RainbowSpeeds[_G.RainbowHitConfig.SpeedLevel] or 0.15
@@ -6539,6 +6521,9 @@ local function ApplyRainbowEffects()
 end
 
 function _G.StartRainbowTimer()
+    return -- REMOVED
+end
+function _G.StartRainbowTimer_DISABLED()
     if RainbowTimerStarted then return end
     if _G.RainbowHitConfig.IsRunning then return end
 
@@ -9448,18 +9433,10 @@ function _G.InitModMenuTab()
             { Key = "ModMenu_Arrow", UI = AliasMap.Switcher, Text = T("Side Arrow ESP", "Side Arrow ESP"),
               GetFunc = function() return getF("ARROW_RADAR") end,
               SetFunc = function(c, v) return setF("ARROW_RADAR", v) end },
-            { Key = "ModMenu_FOV", UI = AliasMap.Switcher, Text = T("FOV Circle", "FOV Circle"),
-              GetFunc = function() return getF("FOV_CIRCLE") end,
-              SetFunc = function(c, v) return setF("FOV_CIRCLE", v) end },
+            -- FOV Circle removed
             { Key = "ModMenu_Wallhack", UI = AliasMap.Switcher, Text = T("Wallhack", "Wallhack"),
               GetFunc = function() return getF("WALLHACK") end,
               SetFunc = function(c, v) return setF("WALLHACK", v) end },
-        }
-
-        local StackAim = {
-            { Key = "ModMenu_Aimbot", UI = AliasMap.Switcher, Text = T("Aimbot", "Aimbot"),
-              GetFunc = function() return getF("AIMBOT") end,
-              SetFunc = function(c, v) return setF("AIMBOT", v) end },
         }
 
         SettingPageDefine.ModMenu = {
@@ -9468,7 +9445,6 @@ function _G.InitModMenuTab()
             UIKey = "Setting_Page_Privacy",
             Category = {
                 { Key = "Cat_ESP", Text = 999001, Stack = StackESP },
-                { Key = "Cat_Aim", Text = 999002, Stack = StackAim },
             }
         }
 
